@@ -1,5 +1,6 @@
 /**
  * Stores the security token recieved by login.
+ * @private
  */
 export class SecurityToken {
     private timeCreated: number;

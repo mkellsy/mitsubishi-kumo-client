@@ -2,6 +2,7 @@ import { DeviceState } from "@mkellsy/hap-device";
 
 /**
  * Defines a thermostat's current status response.
+ * @public
  */
 export interface ThermostatState extends DeviceState {
     /**

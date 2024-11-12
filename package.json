@@ -1,5 +1,5 @@
 {
-    "version": "1.0.1",
+    "version": "1.0.2",
     "name": "@mkellsy/mitsubishi-kumo-client",
     "displayName": "Mitsubishi Kumo Cloud Client",
     "description": "Discovers and publishes Kumo Cloud enabled heat pumps and mini-splits.",
@@ -25,6 +25,7 @@
         "@mkellsy/event-emitter": "^1.5.2",
         "@mkellsy/hap-device": "^1.7.5",
         "base-64": "^1.0.0",
+        "bson": "5.5.1",
         "colors": "^1.4.0",
         "commander": "^10.0.1",
         "deep-equal": "^2.2.3",
@@ -34,6 +35,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.2.0",
+        "@microsoft/api-extractor": "^7.47.11",
         "@types/base-64": "^1.0.2",
         "@types/debug": "^4.1.12",
         "@types/deep-equal": "^1.0.4",
@@ -43,10 +45,13 @@
         "@typescript-eslint/eslint-plugin": "^7.11.0",
         "esbuild": "^0.20.2",
         "eslint": "^8.57.0",
+        "eslint-plugin-jsdoc": "^48.2.3",
         "prettier": "^3.2.5",
         "proxyrequire": "^1.0.21",
         "source-map-support": "^0.5.21",
         "ts-node": "^10.9.1",
+        "typedoc": "^0.26.10",
+        "typedoc-plugin-markdown": "^4.2.9",
         "typescript": "^5.3.3"
     }
 }

@@ -1,17 +1,18 @@
-import * as Interfaces from "@mkellsy/hap-device";
-
 import equals from "deep-equal";
 
-import { Common } from "./Common";
-import { Location } from "../Location";
+import { DeviceType, ThermostatStatus } from "@mkellsy/hap-device";
+
+import { Common } from "../Common";
+import { Client } from "../../Client";
+import { Thermostat } from "./Thermostat";
 import { ThermostatState } from "./ThermostatState";
-import { ZoneTable } from "../Interfaces/ZoneTable";
-import { stat } from "fs";
+import { ZoneTable } from "../../Response/ZoneTable";
 
 /**
  * Defines a thermostat device.
+ * @private
  */
-export class Thermostat extends Common<ThermostatState> implements Interfaces.Thermostat {
+export class ThermostatController extends Common<ThermostatState> implements Thermostat {
     private minTarget: number = 0;
     private maxTarget: number = Infinity;
 
@@ -23,16 +24,16 @@ export class Thermostat extends Common<ThermostatState> implements Interfaces.Th
      * Creates a thermostat device.
      *
      * ```js
-     * const thermostat = new Thermostat(location, zone);
+     * const thermostat = new ThermostatController(client, zone);
      * ```
      *
-     * @param location The location this thermostat is in.
+     * @param client The client this thermostat is registered to.
      * @param zone The zone information from Kumo Cloud.
      */
-    constructor(location: Location, zone: ZoneTable) {
+    constructor(client: Client, zone: ZoneTable) {
         super(
-            Interfaces.DeviceType.Thermostat,
-            location,
+            DeviceType.Thermostat,
+            client,
             { serial: zone.serial, name: zone.label },
             { state: "Off", temprature: 0, heatTarget: 0, coolTarget: 0 },
         );
@@ -83,7 +84,7 @@ export class Thermostat extends Common<ThermostatState> implements Interfaces.Th
      *
      * @param zone The zone information from Kumo Cloud.
      */
-    public refresh(zone: ZoneTable) {
+    public refresh(zone: ZoneTable): void {
         this.ipAddress = zone.ip;
         this.devicePassword = zone.password;
         this.deviceToken = zone.cryptoSerial;
@@ -106,7 +107,7 @@ export class Thermostat extends Common<ThermostatState> implements Interfaces.Th
      *
      * @param status The current device state.
      */
-    public update(status: Interfaces.ThermostatStatus): void {
+    public update(status: ThermostatStatus): void {
         const previous = { ...this.status };
 
         switch (status.mode) {
@@ -165,15 +166,15 @@ export class Thermostat extends Common<ThermostatState> implements Interfaces.Th
             const waits: Promise<void>[] = [];
 
             if (status.state != null) {
-                waits.push(this.location.execute(this.serial, "Mode", status.state));
+                waits.push(this.client.execute(this.serial, "Mode", status.state));
             }
 
             if (status.coolTarget != null) {
-                waits.push(this.location.execute(this.serial, "CoolTarget", status.coolTarget));
+                waits.push(this.client.execute(this.serial, "CoolTarget", status.coolTarget));
             }
 
             if (status.heatTarget != null) {
-                waits.push(this.location.execute(this.serial, "HeatTarget", status.heatTarget));
+                waits.push(this.client.execute(this.serial, "HeatTarget", status.heatTarget));
             }
 
             Promise.all(waits)

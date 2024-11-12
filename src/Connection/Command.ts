@@ -1,5 +1,6 @@
 /**
  * Kumo command map.
+ * @public
  */
 export interface Command {
     /**

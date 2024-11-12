@@ -1,5 +1,6 @@
 /**
  * Stores login credentials for Kumo Cloud.
+ * @private
  */
 export interface Credentials {
     /**

@@ -1,7 +1,16 @@
 import base64 from "base-64";
 import sjcl from "sjcl";
 
-export function encode(body: string, password?: string, serial?: string) {
+/**
+ * Encodes a string.
+ *
+ * @param body The content to encode.
+ * @param password The password/private key.
+ * @param serial The serial/public key.
+ *
+ * @returns An encrypted string.
+ */
+export function encode(body: string, password?: string, serial?: string): string {
     const W = h2l("44c73283b498d432ff25f5c8e06a016aef931e68f0a00ea710e36e6338fb22db");
     const p = base64.decode(password || "");
 
@@ -43,7 +52,14 @@ export function encode(body: string, password?: string, serial?: string) {
     return hash;
 }
 
-export function h2l(body: string): number[] {
+/**
+ * Converts a string to a number array.
+ *
+ * @param body A string to convert.
+ *
+ * @returns A number array of the body.
+ */
+function h2l(body: string): number[] {
     const results: number[] = [];
 
     for (let i = 0; i < body.length; i += 2) {
@@ -53,7 +69,14 @@ export function h2l(body: string): number[] {
     return results;
 }
 
-export function l2h(body: Uint8Array): string {
+/**
+ * Converts a number array to a string.
+ *
+ * @param body A number array to convert.
+ *
+ * @returns The converted string.
+ */
+function l2h(body: Uint8Array): string {
     let results = "";
 
     for (let i = 0; i < body.length; ++i) {

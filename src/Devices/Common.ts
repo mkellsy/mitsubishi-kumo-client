@@ -1,31 +1,32 @@
-import * as Logger from "js-logger";
-import * as Interfaces from "@mkellsy/hap-device";
-
 import Colors from "colors";
 
+import { get as getLogger, ILogger } from "js-logger";
+
+import { Action, Address, Area, Button, Capability, Device, DeviceState, DeviceType } from "@mkellsy/hap-device";
 import { EventEmitter } from "@mkellsy/event-emitter";
 
-import { Device } from "../Interfaces/Device";
-import { Location } from "../Location";
+import { Client } from "../Client";
+import { generateId } from "./Devices";
 
 /**
  * Defines common functionallity for a device.
+ * @private
  */
-export abstract class Common<STATE extends Interfaces.DeviceState> extends EventEmitter<{
-    Action: (device: Interfaces.Device, button: Interfaces.Button, action: Interfaces.Action) => void;
-    Update: (device: Interfaces.Device, state: STATE) => void;
+export abstract class Common<STATE extends DeviceState> extends EventEmitter<{
+    Action: (device: Device, button: Button, action: Action) => void;
+    Update: (device: Device, state: STATE) => void;
 }> {
-    protected location: Location;
+    protected client: Client;
     protected state: STATE;
     protected initialized: boolean = false;
-    protected fields: Map<string, Interfaces.Capability> = new Map();
+    protected fields: Map<string, Capability> = new Map();
 
-    private logger: Logger.ILogger;
+    private logger: ILogger;
     private updateInterval?: NodeJS.Timeout;
 
     private deviceName: string;
     private deviceSerial: string;
-    private deviceType: Interfaces.DeviceType;
+    private deviceType: DeviceType;
 
     /**
      * Creates a base device object.
@@ -41,26 +42,21 @@ export abstract class Common<STATE extends Interfaces.DeviceState> extends Event
      * ```
      *
      * @param type The device type.
-     * @param location The main connection.
+     * @param client The main connection.
      * @param definition The definition object containing id, name and suffix.
      * @param definition.id The connection id.
      * @param definition.name The connection name.
      * @param definition.suffix The device suffix.
      */
-    constructor(
-        type: Interfaces.DeviceType,
-        location: Location,
-        definition: { serial: string; name: string },
-        state: STATE,
-    ) {
+    constructor(type: DeviceType, client: Client, definition: { serial: string; name: string }, state: STATE) {
         super();
 
-        this.location = location;
+        this.client = client;
         this.deviceSerial = definition.serial;
         this.deviceName = definition.name;
         this.deviceType = type;
 
-        this.logger = Logger.get(`Device ${Colors.dim(this.id)}`);
+        this.logger = getLogger(`Device ${Colors.dim(this.id)}`);
         this.state = state;
 
         this.updateInterval = setInterval(() => {
@@ -96,7 +92,7 @@ export abstract class Common<STATE extends Interfaces.DeviceState> extends Event
      * @returns The device id.
      */
     public get id(): string {
-        return Device.generateId(this.deviceSerial);
+        return generateId(this.deviceSerial);
     }
 
     /**
@@ -132,7 +128,7 @@ export abstract class Common<STATE extends Interfaces.DeviceState> extends Event
      *
      * @returns The device's capabilities.
      */
-    public get capabilities(): { [key: string]: Interfaces.Capability } {
+    public get capabilities(): { [key: string]: Capability } {
         return Object.fromEntries(this.fields);
     }
 
@@ -142,7 +138,7 @@ export abstract class Common<STATE extends Interfaces.DeviceState> extends Event
      *
      * @returns A reference to the logger assigned to this device.
      */
-    public get log(): Logger.ILogger {
+    public get log(): ILogger {
         return this.logger;
     }
 
@@ -151,7 +147,7 @@ export abstract class Common<STATE extends Interfaces.DeviceState> extends Event
      *
      * @returns The device's href address.
      */
-    public get address(): Interfaces.Address {
+    public get address(): Address {
         return { href: this.deviceSerial };
     }
 
@@ -160,7 +156,7 @@ export abstract class Common<STATE extends Interfaces.DeviceState> extends Event
      *
      * @returns The device type.
      */
-    public get type(): Interfaces.DeviceType {
+    public get type(): DeviceType {
         return this.deviceType;
     }
 
@@ -169,7 +165,7 @@ export abstract class Common<STATE extends Interfaces.DeviceState> extends Event
      *
      * @returns The device's area.
      */
-    public get area(): Interfaces.Area {
+    public get area(): Area {
         return {
             href: this.address.href,
             Name: "Equipment",
@@ -192,6 +188,6 @@ export abstract class Common<STATE extends Interfaces.DeviceState> extends Event
     }
 
     public query = (): Promise<void> => {
-        return this.location.update(this.deviceSerial);
+        return this.client.update(this.deviceSerial);
     };
 }

@@ -1,23 +1,29 @@
-import * as Interfaces from "@mkellsy/hap-device";
+import { get as getLogger } from "js-logger";
 
 import fetch from "node-fetch-native";
 
 import { ARP } from "@mkellsy/arp";
-import { Device, DeviceState } from "@mkellsy/hap-device";
+import { Device, DeviceState, ThermostatStatus } from "@mkellsy/hap-device";
 import { EventEmitter } from "@mkellsy/event-emitter";
 
-import { AuthToken } from "./Interfaces/AuthToken";
-import { Command } from "./Interfaces/Command";
-import { Credentials } from "./Interfaces/Credentials";
-import { Headers } from "./Interfaces/Headers";
-import { SecurityToken } from "./Interfaces/SecurityToken";
-import { Site } from "./Interfaces/Site";
-import { Thermostat } from "./Devices/Thermostat";
-import { ZoneTable } from "./Interfaces/ZoneTable";
+import { AuthToken } from "./Response/AuthToken";
+import { Command } from "./Connection/Command";
+import { Context } from "./Connection/Context";
+import { Headers } from "./Response/Headers";
+import { SecurityToken } from "./Response/SecurityToken";
+import { Site } from "./Response/Site";
+import { ThermostatController } from "./Devices/Thermostat/ThermostatController";
+import { ZoneTable } from "./Response/ZoneTable";
 
-import { encode } from "./Cryptography";
+import { encode } from "./Connection/Cryptography";
 
-export class Location extends EventEmitter<{
+const log = getLogger("Client");
+
+/**
+ * Creates an object that represents a single location, with a single network.
+ * @public
+ */
+export class Client extends EventEmitter<{
     Available: (devices: Device[]) => void;
     Message: (response: Response) => void;
     Update: (device: Device, state: DeviceState) => void;
@@ -25,19 +31,21 @@ export class Location extends EventEmitter<{
     private token?: SecurityToken;
     private tokenTimeout?: NodeJS.Timeout;
 
-    private credentials: Credentials;
-    private devices: Map<string, Thermostat> = new Map();
+    private context: Context;
+    private devices: Map<string, ThermostatController> = new Map();
 
-    constructor(credentials: Credentials) {
+    constructor() {
         super(Infinity);
 
-        this.credentials = credentials;
+        this.context = new Context();
 
-        this.discoverZones().then(() => {
-            Promise.all(Array.from(this.devices.keys()).map((serial) => this.update(serial))).then(() => {
-                this.emit("Available", Array.from(this.devices.values()));
-            });
-        });
+        this.discoverZones()
+            .then(() => {
+                Promise.all(Array.from(this.devices.keys()).map((serial) => this.update(serial))).then(() => {
+                    this.emit("Available", Array.from(this.devices.values()));
+                });
+            })
+            .catch((error) => log.error(error.message));
     }
 
     /**
@@ -52,6 +60,11 @@ export class Location extends EventEmitter<{
         this.devices.forEach((device) => device.destroy());
     }
 
+    /**
+     * Updates a zone.
+     *
+     * @param serial The serial number of the zone to upodate
+     */
     public update(serial: string): Promise<void> {
         return new Promise((resolve, reject) => {
             const device = this.devices.get(serial);
@@ -60,7 +73,7 @@ export class Location extends EventEmitter<{
                 return reject(new Error("Tried to access a zone that is not discovered."));
             }
 
-            (device.ip != null ? this.updatetLocal(device) : this.updateRemote(device))
+            (device.ip != null ? this.updateLocal(device) : this.updateRemote(device))
                 .then((status) => {
                     device.update(status);
 
@@ -74,6 +87,13 @@ export class Location extends EventEmitter<{
         });
     }
 
+    /**
+     * Executes a command on the zone.
+     *
+     * @param serial The serial of the zone to execute the command on.
+     * @param command The command to execute.
+     * @param value The value for the command.
+     */
     public execute<COMMAND extends keyof Command>(
         serial: string,
         command: COMMAND,
@@ -102,8 +122,11 @@ export class Location extends EventEmitter<{
         });
     }
 
+    /*
+     * Builds a command.
+     */
     private buildCommand<COMMAND extends keyof Command>(
-        device: Thermostat,
+        device: ThermostatController,
         command: COMMAND,
         value: Command[COMMAND],
     ): Record<string, unknown> | undefined {
@@ -154,6 +177,9 @@ export class Location extends EventEmitter<{
         return undefined;
     }
 
+    /*
+     * Bulds a command for local control.
+     */
     private buildModeCommandLocal(value: Command["Mode"]): { mode: string } {
         switch (value) {
             case "Heat":
@@ -170,7 +196,10 @@ export class Location extends EventEmitter<{
         }
     }
 
-    private updatetLocal(device: Thermostat): Promise<Interfaces.ThermostatStatus> {
+    /*
+     * Updates a zone locally.
+     */
+    private updateLocal(device: ThermostatController): Promise<ThermostatStatus> {
         return new Promise((resolve, reject) => {
             const body = JSON.stringify({ c: { indoorUnit: { status: {} } } });
             const url = `http://${device.ip}/api?m=${encode(body, device.password, device.token)}`;
@@ -196,7 +225,10 @@ export class Location extends EventEmitter<{
         });
     }
 
-    private executeLocal(device: Thermostat, command: Record<string, unknown>): Promise<void> {
+    /*
+     * Executes a command locally.
+     */
+    private executeLocal(device: ThermostatController, command: Record<string, unknown>): Promise<void> {
         return new Promise((resolve, reject) => {
             const body = JSON.stringify({ c: { indoorUnit: { status: command } } });
             const url = `http://${device.ip}/api?m=${encode(body, device.password, device.token)}`;
@@ -216,6 +248,9 @@ export class Location extends EventEmitter<{
         });
     }
 
+    /*
+     * Builsa a command for cloud control.
+     */
     private buildModeCommandRemote(value: Command["Mode"]): { power: number; operationMode: number } {
         switch (value) {
             case "Heat":
@@ -232,7 +267,10 @@ export class Location extends EventEmitter<{
         }
     }
 
-    private updateRemote(device: Thermostat): Promise<Interfaces.ThermostatStatus> {
+    /*
+     * Updates a zone from the cloud.
+     */
+    private updateRemote(device: ThermostatController): Promise<ThermostatStatus> {
         return new Promise((resolve, reject) => {
             fetch("https://geo-c.kumocloud.com/getDeviceUpdates", {
                 method: "POST",
@@ -290,7 +328,10 @@ export class Location extends EventEmitter<{
         });
     }
 
-    private executeRemote(device: Thermostat, command: Record<string, unknown>): Promise<void> {
+    /*
+     * Executes a command via the cloud.
+     */
+    private executeRemote(device: ThermostatController, command: Record<string, unknown>): Promise<void> {
         return new Promise((resolve, reject) => {
             fetch("https://geo-c.kumocloud.com/sendDeviceCommands/v2", {
                 method: "POST",
@@ -307,8 +348,15 @@ export class Location extends EventEmitter<{
         });
     }
 
+    /*
+     * Discovers zones from a Kumo account.
+     */
     private discoverZones(): Promise<void> {
         return new Promise((resolve, reject) => {
+            if (this.context.username == null || this.context.password == null) {
+                return reject(new Error("Invalid username or password"));
+            }
+
             if (this.tokenTimeout != null) {
                 clearTimeout(this.tokenTimeout);
             }
@@ -319,7 +367,8 @@ export class Location extends EventEmitter<{
                 method: "POST",
                 headers: Headers,
                 body: JSON.stringify({
-                    ...this.credentials,
+                    username: this.context.username,
+                    password: this.context.password,
                     appVersion: "2.2.0",
                 }),
             })
@@ -364,6 +413,9 @@ export class Location extends EventEmitter<{
         });
     }
 
+    /*
+     * Reads child information from a zone response.
+     */
     private parseZones(payload: Site[]): Promise<void> {
         return new Promise((resolve, reject) => {
             const waits: Promise<void>[] = [];
@@ -399,6 +451,9 @@ export class Location extends EventEmitter<{
         });
     }
 
+    /*
+     * Creates a device from a zone table.
+     */
     private createDevice(zone: ZoneTable, ip?: string): void {
         const device = this.devices.get(zone.serial);
 
@@ -410,7 +465,7 @@ export class Location extends EventEmitter<{
         } else {
             this.devices.set(
                 zone.serial,
-                new Thermostat(this, {
+                new ThermostatController(this, {
                     ...zone,
                     ip,
                 }).on("Update", this.onDeviceUpdate),
@@ -421,7 +476,7 @@ export class Location extends EventEmitter<{
     /*
      * When a device updates, this will emit an update event.
      */
-    private onDeviceUpdate = (device: Interfaces.Device, state: Interfaces.DeviceState): void => {
+    private onDeviceUpdate = (device: Device, state: DeviceState): void => {
         this.emit("Update", device, state);
     };
 }
