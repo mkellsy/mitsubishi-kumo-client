@@ -83,7 +83,7 @@ export abstract class Common<STATE extends DeviceState> extends EventEmitter<{
      * @returns The manufacturer.
      */
     public get manufacturer(): string {
-        return "Mitsubishi";
+        return "Mitsubishi Electric Trane";
     }
 
     /**
