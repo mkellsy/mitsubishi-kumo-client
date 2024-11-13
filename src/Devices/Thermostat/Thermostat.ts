@@ -41,4 +41,9 @@ export interface Thermostat extends ThermostatInterface {
      * @param status Desired device state.
      */
     set(status: Partial<ThermostatState>): Promise<void>;
+
+    /**
+     * Polls the device to fetch updated state.
+     */
+    query(): Promise<void>;
 }
