@@ -1,5 +1,5 @@
 {
-    "version": "1.0.2",
+    "version": "1.0.3",
     "name": "@mkellsy/mitsubishi-kumo-client",
     "displayName": "Mitsubishi Kumo Cloud Client",
     "description": "Discovers and publishes Kumo Cloud enabled heat pumps and mini-splits.",
