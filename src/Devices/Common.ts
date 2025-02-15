@@ -63,7 +63,7 @@ export abstract class Common<STATE extends DeviceState> extends EventEmitter<{
             this.query().catch((error) => {
                 this.log.error(error);
             });
-        }, 10_000);
+        }, 600_000);
     }
 
     /**

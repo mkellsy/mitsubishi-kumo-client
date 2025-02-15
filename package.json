@@ -1,5 +1,5 @@
 {
-    "version": "1.0.5",
+    "version": "1.0.6",
     "name": "@mkellsy/mitsubishi-kumo-client",
     "displayName": "Mitsubishi Kumo Cloud Client",
     "description": "Discovers and publishes Kumo Cloud enabled heat pumps and mini-splits.",
@@ -47,7 +47,6 @@
         "eslint": "^8.57.0",
         "eslint-plugin-jsdoc": "^48.2.3",
         "prettier": "^3.2.5",
-        "proxyrequire": "^1.0.21",
         "source-map-support": "^0.5.21",
         "ts-node": "^10.9.1",
         "typedoc": "^0.26.10",

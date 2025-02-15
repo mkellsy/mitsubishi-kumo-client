@@ -260,6 +260,18 @@ The listener to bind.
 
 ***
 
+### query()
+
+> **query**(): `Promise`\<`void`\>
+
+Polls the device to fetch updated state.
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
 ### set()
 
 > **set**(`status`): `Promise`\<`void`\>

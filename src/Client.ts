@@ -402,7 +402,7 @@ export class Client extends EventEmitter<{
                                 .catch((error) => reject(error));
                         })
                         .finally(() => {
-                            const expiryTime = this.token?.expiryTime || Date.now() + 10_000;
+                            const expiryTime = this.token?.expiryTime || Date.now() + 600_000;
                             const duration = expiryTime - Date.now();
 
                             this.tokenTimeout = setTimeout(() => this.discoverZones(), duration);
@@ -421,6 +421,10 @@ export class Client extends EventEmitter<{
             const waits: Promise<void>[] = [];
 
             for (let i = 0; i < payload.length; i++) {
+                if (payload[i].children != null && payload[i].children.length > 0) {
+                    waits.push(this.parseZones(payload[i].children));
+                }
+
                 const data = payload[i].zoneTable;
                 const serials = Object.keys(data);
 
